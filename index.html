@@ -1,0 +1,245 @@
+<html>
+    <head>
+        <style>
+        html, body { 
+            background-color:#000;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden !important;  
+        }
+        </style>
+<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+    <!-- <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@latest/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@latest/examples/jsm/"
+      }
+    }
+    </script> -->
+    <script type="module" src="index.js"></script>
+    <script type="module">
+
+      import * as THREE from 'https://unpkg.com/three@latest/build/three.module.js';
+      import { OrbitControls } from 'https://unpkg.com/three@latest/examples/jsm/controls/OrbitControls.js';
+      import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js';
+      import {genSound, playSounds, genDrumSound, createNotes, createDrums, createBass, genBass, randColor, genOrgan, createOrgan} from './index.js'
+
+      var renderer, controls, scene, camera, LASTOBJECT, pane, lastkey, invisible_plane;
+      var soundKey;
+      var placing = false;
+      const drum_geometries = [];
+      const piano_geometries = [];
+      const organ_geometries = [];
+      const bass_geometries = [];
+      var notes = "Ds6";
+      var drums = "hh";
+      var bass = "bass1";
+      var organ = "C3"
+      const U_AXIS = new THREE.Vector3(1, 1, 0);
+      const V_AXIS = new THREE.Vector3(1, 0, 1);
+      const W_AXIS = new THREE.Vector3(0, 1, 1);
+      const X_AXIS = new THREE.Vector3(1, 0, 0);
+      const Y_AXIS = new THREE.Vector3(0, 1, 0);
+      const Z_AXIS = new THREE.Vector3(0, 0, 1);
+      const AXIS = [U_AXIS, V_AXIS, W_AXIS, X_AXIS, Y_AXIS, Z_AXIS]
+
+      function randAxis(){
+        var index = Math.floor(Math.random() * 7);
+        return AXIS[index];
+      }
+      function updateObject(mesh, speed, axis) {
+        const center = new THREE.Vector3(0, 0, 0);
+        mesh.position.sub(center);
+        mesh.position.applyAxisAngle(axis, speed);
+        mesh.position.add(center);
+      }
+
+      window.onload = function() {
+
+        // Three.js code goes here
+        scene = new THREE.Scene();
+
+        // setup the camera
+        var fov = 75;
+        var ratio = window.innerWidth / window.innerHeight;
+        var zNear = 1;
+        var zFar = 10000;
+        camera = new THREE.PerspectiveCamera( fov, ratio, zNear, zFar );
+        camera.position.set(0, 0, 100);
+
+        // create renderer and setup the canvas
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.body.appendChild( renderer.domElement );
+
+
+        renderer.domElement.onmousedown = function( e ){
+            if(e.shiftKey){
+            console.log("shift key pressed");
+            controls.enabled = false;
+            placing = true;
+
+
+            var pixel_coords = new THREE.Vector2( e.clientX, e.clientY );
+            // console.log('Pixel coords', pixel_coords);
+
+            var vp_coords = new THREE.Vector2( 
+                        ( pixel_coords.x / window.innerWidth ) * 2 - 1,  //X
+                        -( pixel_coords.y / window.innerHeight ) * 2 + 1) // Y
+
+            console.log('Viewport coords', vp_coords);
+
+            var vp_coords_near = new THREE.Vector3( vp_coords.x, vp_coords.y, 0);
+
+
+            var raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(vp_coords_near, camera);
+            var intersects = raycaster.intersectObject(invisible_plane);
+
+            console.log('Ray to Invisible Plane', intersects[0].point);
+            //check the lastkey pressed and if it is one of the geometries associated key
+            //add the new geometry to the scene.
+            if(lastkey == 'w'){
+                var geometry = new THREE.TorusKnotGeometry( window.SCENE.torus_radius, 
+                                                window.SCENE.torus_tube,
+                                                window.SCENE.torus_tubular_seg,
+                                                window.SCENE.torus_radial_seg,
+                                                window.SCENE.torus_p,
+                                                window.SCENE.torus_q);
+                var material = new THREE.MeshLambertMaterial({color: parseInt(randColor())});
+                var torusKnot = new THREE.Mesh( geometry, material ); 
+                scene.add( torusKnot );
+                notes = genSound(Math.floor(window.SCENE.torus_radius), notes);
+                piano_geometries.push(torusKnot);
+                torusKnot.position.set(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+            }else if(lastkey == 'e'){
+                var geometry = new THREE.OctahedronGeometry(window.SCENE.octahedron_radius);
+                var material = new THREE.MeshLambertMaterial({color: parseInt(randColor())});
+                var octahedron = new THREE.Mesh( geometry, material);
+                scene.add(octahedron);
+                drum_geometries.push(octahedron);
+                //notes = genSound('c', Math.floor(window.SCENE.octahedron_radius / 5), notes);
+                drums = genDrumSound( Math.floor(window.SCENE.octahedron_radius),drums);
+                console.log("Drums in html: " + drums);
+                octahedron.position.set(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+            } else if(lastkey == 's'){
+                var geometry = new THREE.CapsuleGeometry(window.SCENE.capsule_radius, window.SCENE.capsule_height);
+                var material = new THREE.MeshLambertMaterial({color: parseInt(randColor())});
+                var capsule = new THREE.Mesh( geometry, material);
+                scene.add(capsule);
+                bass_geometries.push(capsule);
+                bass = genBass(Math.floor(window.SCENE.capsule_radius), bass);
+                capsule.position.set(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+            } else if(lastkey == 'd'){
+                var geometry = new THREE.SphereGeometry(window.SCENE.sphere_radius);
+                var material = new THREE.MeshLambertMaterial({color: parseInt(randColor())});
+                var sphere = new THREE.Mesh( geometry, material);
+                scene.add(sphere);
+                organ_geometries.push(sphere);
+                organ = genOrgan(Math.floor(window.SCENE.sphere_radius), organ);
+                sphere.position.set(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+            }
+        };
+        window.onkeypress = function (e){
+            if (e.key == 'w') {lastkey = 'w';} 
+            else if (e.key == 'e') {lastkey = 'e';} 
+            else if (e.key == 's') {lastkey = 's';} 
+            else if (e.key == 'd') {lastkey = 'd';}
+        };
+
+          renderer.domElement.onmouseup = function (e){
+            controls.enabled = true;
+            placing = false;
+          }
+        }
+        // setup lights
+        var ambientLight = new THREE.AmbientLight();
+        scene.add( ambientLight );
+
+        var light = new THREE.DirectionalLight( 0xffffff, 5.0 );
+        light.position.set( 10, 100, 10 );
+        scene.add( light );
+
+        pane = new Pane();
+        var sceneui = pane.addFolder({title: 'Torus Knot', expanded:false});
+        var octahedronui = pane.addFolder({title: 'Octahedron', expanded:false});
+        var capsuleui = pane.addFolder({title: 'Capsule', expanded:false});
+        var sphereui = pane.addFolder({title: 'Sphere', expanded:false});
+        window['SCENE'] = {
+            //intercahngable with the torus geometry and torus knot besides the p adn q vals
+            'torus_radius' : 10,
+            'torus_tube' : 3,
+            'torus_tubular_seg' : 100,
+            'torus_radial_seg' : 16,
+            'torus_p' : 2,
+            'torus_q' : 3,
+            //-------------------//
+            'octahedron_radius' : 10,
+            //-------------------//
+            'capsule_radius' : 10,
+            'capsule_height': 10,
+            //-------------------//
+            'sphere_radius' : 10
+        };
+
+
+        sceneui.addBinding(window.SCENE, 'torus_radius', {min:1, max:100, label:'Torus Radius'});
+        sceneui.addBinding(window.SCENE, 'torus_tube', {min:1, max:100, label:'Torus Tube'});
+        sceneui.addBinding(window.SCENE, 'torus_tubular_seg', {min:1, max:500, label:'Torus Tubular Seg'});
+        sceneui.addBinding(window.SCENE, 'torus_radial_seg', {min:1, max:100, label:'Torus Radial Seg'});
+        sceneui.addBinding(window.SCENE, 'torus_p', {min:1, max:10, label:'Torus P Val'});
+        sceneui.addBinding(window.SCENE, 'torus_q', {min:1, max:10, label:'Torus Q Val'});
+
+        octahedronui.addBinding(window.SCENE, 'octahedron_radius', {min: 10, max:100, label:'Octahedron Radius'});
+
+        capsuleui.addBinding(window.SCENE, 'capsule_radius', {min:10, max:100, label:'Capsule Radius'});
+        capsuleui.addBinding(window.SCENE, 'capsule_height', {min:10, max:100, label:'Capsule Height'});
+
+        sphereui.addBinding(window.SCENE, 'sphere_radius', {min:10, max:100, label:'Sphere Radius'})
+        var geometry = new THREE.OctahedronGeometry(50);
+        var material = new THREE.MeshLambertMaterial({color: parseInt(randColor())});
+        var octahedron = new THREE.Mesh( geometry, material);
+        scene.add(octahedron);
+        drums = genDrumSound(window.SCENE.octahedron_radius, drums);
+        //10, 3, 100, 16
+        //
+        // The invisible plane
+        //
+        geometry = new THREE.PlaneGeometry( 10000, 10000 );
+        material = new THREE.MeshBasicMaterial( {
+          visible: false,
+          side: THREE.DoubleSide
+        });
+
+        invisible_plane = new THREE.Mesh( geometry, material );
+
+        scene.add( invisible_plane );
+
+        // interaction
+        controls = new OrbitControls( camera, renderer.domElement );
+        // call animation/rendering loop
+        animate();
+    };
+
+      function animate() {
+        playSounds(createNotes(notes), createDrums(drums), createBass(bass), createOrgan(organ));
+        piano_geometries.forEach(m => updateObject(m, 0.004, W_AXIS));
+        drum_geometries.forEach(m => updateObject(m, 0.004, U_AXIS));
+        organ_geometries.forEach(m => updateObject(m, 0.004, Y_AXIS));
+        bass_geometries.forEach(m => updateObject(m, 0.004, V_AXIS));
+        requestAnimationFrame( animate );
+        invisible_plane.position.set(0, 0, 0);
+        invisible_plane.quaternion.copy(camera.quaternion);
+        // and here..
+        controls.update();
+        renderer.render( scene, camera );
+        
+      };
+    </script>
+    </head>
+    <body>
+    </body>
+</html>
