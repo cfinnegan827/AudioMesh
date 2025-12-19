@@ -1,4 +1,4 @@
-import { note, samples, stack } from '@strudel/web';
+import { note, samples, stack } from "https://esm.sh/@strudel/web";//'@strudel/web';
 
 initStrudel({
   prebake: async () => {
