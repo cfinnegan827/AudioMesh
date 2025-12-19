@@ -17,7 +17,9 @@ The geometries are created using threejs. Each geomtry is fully customizable. Us
 using strudel to handle all of the sounds and notes associated with the geometries. Using different sounds samples to play notes based on the size of each shape.
 
 [strudel documentation](https://strudel.cc/workshop/getting-started/)
+
 [Link to tidal cycles sample](https://github.com/tidalcycles/Dirt-Samples/tree/master)
+
 [Link to dough sample](https://github.com/felixroos/dough-samples/tree/main)
 
 ## Installing/Running
